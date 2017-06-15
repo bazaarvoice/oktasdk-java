@@ -20,6 +20,7 @@ import org.apache.http.message.BasicHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
@@ -198,6 +199,28 @@ public abstract class ApiClient {
         LOGGER.info(String.format("%s %s", httpUriRequest.getMethod(), httpUriRequest.getURI()));
     }
 
+    protected String logResponse(HttpResponse httpResponse) {
+        int status = 0;
+        String reason = "";
+        String responseBody;
+        try {
+            status = httpResponse.getStatusLine().getStatusCode();
+            reason = httpResponse.getStatusLine().getReasonPhrase();
+            String body = httpResponse.getStatusLine().getReasonPhrase();
+            ByteArrayOutputStream outstream = new ByteArrayOutputStream();
+            httpResponse.getEntity().writeTo(outstream);
+            responseBody = new String(outstream.toByteArray());
+        } catch (IOException e) {
+            responseBody = new String("Unable to parse entity body: "+e.getMessage());
+        } catch (Exception e) {
+            responseBody = new String("Unable print response: "+e.getMessage());
+        }
+
+        String response = String.format("status: %d reason: %s \n %s", status, reason, responseBody);
+        LOGGER.info(response);
+        return response;
+    }
+
     protected void setHeaders(HttpUriRequest httpUriRequest) throws IOException {
         setTokenHeader(httpUriRequest);
 
@@ -273,7 +296,18 @@ public abstract class ApiClient {
     protected <T> T unmarshallResponse(TypeReference<T> clazz, HttpResponse httpResponse) throws IOException {
         boolean contentReturned = checkResponse(httpResponse);
         if (contentReturned) {
-            return unmarshall(httpResponse, clazz);
+            if (httpResponse.getEntity().getContentType().getValue().contains("application/json")) {
+                try {
+                    return unmarshall(httpResponse, clazz);
+                } catch (IOException e) {
+                    LOGGER.error("Error parsing response: "+ e.getMessage());
+                    throw e;
+                }
+            } else {
+                LOGGER.error("Unexpected content type in response: "+httpResponse.getEntity().getContentType().getValue());
+                String response = logResponse(httpResponse);
+                throw new SdkException("Unexpected content type in response: "+httpResponse.getEntity().getContentType().getValue() + "\n"+response);
+            }
         } else {
             return null;
         }
