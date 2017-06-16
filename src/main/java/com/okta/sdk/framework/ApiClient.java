@@ -213,7 +213,7 @@ public abstract class ApiClient {
         } catch (IOException e) {
             responseBody = new String("Unable to parse entity body: "+e.getMessage());
         } catch (Exception e) {
-            responseBody = new String("Unable print response: "+e.getMessage());
+            responseBody = new String("Unable to print response: "+e.getMessage());
         }
 
         String response = String.format("status: %d reason: %s \n %s", status, reason, responseBody);
