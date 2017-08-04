@@ -56,15 +56,16 @@ public abstract class JsonApiClient extends ApiClient {
             EntityUtils.consume(response.getEntity());
             return null;
         }
-        InputStream inputStream = response.getEntity().getContent();
+        HttpEntity entity = response.getEntity();
+        String entityText = EntityUtils.toString(entity);
         try {
-            JsonParser parser = objectMapper.getFactory().createParser(inputStream);
+            JsonParser parser = objectMapper.getFactory().createParser(entity.getContent());
             T toReturn = parser.readValueAs(clazz);
             EntityUtils.consume(response.getEntity());
             return toReturn;
         } catch (JsonParseException ex) {
             throw new SdkException("Unable to process JSON: "
-                    + EntityUtils.toString(response.getEntity()));
+                    + entityText);
         }
     }
 
