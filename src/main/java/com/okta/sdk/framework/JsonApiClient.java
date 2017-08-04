@@ -59,7 +59,7 @@ public abstract class JsonApiClient extends ApiClient {
         HttpEntity entity = response.getEntity();
         String entityText = EntityUtils.toString(entity);
         try {
-            JsonParser parser = objectMapper.getFactory().createParser(entity.getContent());
+            JsonParser parser = objectMapper.getFactory().createParser(entityText);
             T toReturn = parser.readValueAs(clazz);
             EntityUtils.consume(response.getEntity());
             return toReturn;
