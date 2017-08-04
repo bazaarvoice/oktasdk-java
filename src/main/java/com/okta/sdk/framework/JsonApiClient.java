@@ -2,6 +2,7 @@ package com.okta.sdk.framework;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -10,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.datatype.joda.JodaModule;
+import com.okta.sdk.exceptions.SdkException;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -54,11 +56,17 @@ public abstract class JsonApiClient extends ApiClient {
             EntityUtils.consume(response.getEntity());
             return null;
         }
-        InputStream inputStream = response.getEntity().getContent();
-        JsonParser parser = objectMapper.getFactory().createParser(inputStream);
-        T toReturn = parser.readValueAs(clazz);
-        EntityUtils.consume(response.getEntity());
-        return toReturn;
+        HttpEntity entity = response.getEntity();
+        String entityText = EntityUtils.toString(entity);
+        try {
+            JsonParser parser = objectMapper.getFactory().createParser(entity.getContent());
+            T toReturn = parser.readValueAs(clazz);
+            EntityUtils.consume(response.getEntity());
+            return toReturn;
+        } catch (JsonParseException ex) {
+            throw new SdkException("Unable to process JSON: "
+                    + entityText);
+        }
     }
 
     @Override
